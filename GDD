@@ -1,0 +1,251 @@
+Game Design Document: Card-Based Roguelike
+1. Game Design Document (GDD)
+1.1 Core Concept (The Guild Builder)
+A roguelike "Party-Builder" using a modified standard card set. Unlike traditional card games where cards are spells you cast and forget, here your cards are your Party Members. You are the Leader (Face Card), managing a roster of adventurers, creatures, or specialists. Key Twist: This is a Dual-Rank lane-based game. You deploy your cards onto a persistent board. They stay and fight until they are exhausted or destroyed. Your goal is to manage this "Guild" or "Party" effectively to defeat the Level 7 Superboss.
+1.2 The Resources
+●	HP: Leader Health. Reaching 0 = Death. Protected by the Vanguard.
+●	Deck Count (The Roster): The number of members remaining in your reserve. Reaching 0 = Game Over (Party Disbanded/Wiped).
+○	Fatigue Mechanic (Exhaustion): Every time the discard pile is shuffled back into the deck, 1 card is permanently removed from the encounter (Retreats due to injury/exhaustion).
+●	Dice (Action Points): Dice are rolled into a "Dice Pool." The sum determines the total value (Mana/Energy) available to deploy units or use skills that turn.
+○	Tactical Actions (RNG Mitigation):
+■	Action: Exertion: Discard 1 Card (Bench a member) to add half its value to your Dice Pool. Solves "Mana Screw" (Low Dice vs High Cost Cards).
+■	Action: Reserve (Passive): Bank up to 2 unspent Dice (their complete value) for the next turn.
+1.3 Card Suits & Functions (The Dual-Rank System)
+Every card has a Vanguard Effect (Front Row) and a Rearguard Effect (Back Row). The specific visual flavor depends on the Class, but the mechanical identity is constant.
+●	♠️ Spades (Strikers / Aggression):
+○	Vanguard (Melee): HP = Face Value. Deals damage equal to current HP to the targeted unit. The primary damage dealers.
+○	Rearguard (Ranged/Poke): Deals fixed damage (e.g., 2 for low cards, 4 for high). Targeting Logic: Automatically targets the enemy with the Lowest Current HP (to finish off weak foes).
+●	♣️ Clubs (Defenders / Wards):
+○	Vanguard (Tank): HP = Face Value x 1.5 (rounded up). Deals damage to Vangaurds that struck it (thorns). High HP sponges to soak hits and deal chip.
+○	Rearguard (Reinforce): Grants Shield equal to half Face Value to the ally directly in front of it until the shield breaks (occupies slot until shield is gone).
+●	♥️ Hearts (Menders / Vitality):
+○	Vanguard (Siphon/Paladin): HP = Face Value. Deals damage equal to half Face Value. Lifesteal: Heals itself for half of the damage dealt. Overheal: If at Max HP, excess healing restores the Leader's HP at 1/4 the damage value.
+○	Rearguard (Support): Heals the unit directly in front of it for half Face Value.
+●	♦️ Diamonds (Class Skills / Sorcery):
+○	Function: Instant Actions played directly by the Leader. These are Spells/Abilities, not units. They do not occupy a board slot and are discarded immediately after use (unless otherwise stated).
+○	Mechanic: Each specific Rank (2-10) corresponds to a named Spell unique to that Class Deck. The effect is specific to the card, often involving dice rolls or status effects, rather than just scaling off the number.
+○	Class-Specific Examples:
+■	4♦️ (The Adventurer) - "Get Off Me!": Deal 1d6 damage to a random enemy. Repeat this effect for every friendly Spade unit on the board.
+■	7♦️ (The Night Sister) - "Throat Slit": Destroy a target enemy unit if its HP is less than 7. If successful, your Leader gains Stealth (Untargetable) for 1 turn.
+■	9♦️ (The War Chief) - "Blood for Blood": All friendly Vanguard units take 4 Damage, but gain +8 Attack for this turn.
+■	2♦️ (The Fallen Squire) - "Last Stand": Target Vanguard unit cannot die this turn (HP cannot drop below 1).
+■	8♦️ (The Earth Mother) - "Strangleroot": Stun a target enemy. Deal 1 Damage to it for every empty slot on your board (the forest grows into the gaps).
+■	5♦️ (The Iron Emperor) - "Overclock": Targeted friendly Club unit attacks immediately, but takes 3 Damage (self-inflicted) after the attack resolves.
+■	3♦️ (The Acolyte) - "Submit to the Lord": Deal 2 Damage to all enemy units. Heal all friendly units for 2 HP.
+■	10♦️ (The Matriarch) - "Dominate": Seize control of all of your enemy Support units. Move them to your Rearguard. They are added to your deck.
+■	6♦️ (The Grand Hierophant) - “Allfather’s Wrath": Deal damage to a target enemy equal to your Leader's Missing HP.
+■	5♦️ (The Alchemist) - "Volatile Mixture": Deal 4 Damage to a target. If this kills the target, gain 3 Gold.
+■	8♦️ (The Archmage) - "Relativistic Magecraft": Draw 2 cards. Swap their Dice Costs for this turn only.
+■	10♦️ (The Merchant Prince) - "Just Business": No Dice Cost, spend 50 Gold. Destroy a target enemy unit instantly (bosses are immune).
+1.4 The Player Board & Combat Logic
+A. Structure (The 12-Slot Grid) The player commands a formation of 12 slots, creating a deeper tactical field.
+●	Row 1 (Vanguard): 5 Slots (V1 - V5).
+○	Function: The "Melee" zone. Units here physically block enemies and protect the Rearguard.
+○	Capacity: 5 Units.
+●	Row 2 (Rearguard): 7 Slots (R1 - R7).
+○	Function: The "Support/Reserve" zone. This wider backline allows for extensive support chains, artillery batteries, or protected healers.
+○	Capacity: 7 Units.
+○	Note: Because the Rearguard is wider than the Vanguard, the outer slots (R1 and R7) are "Flanks." They are harder for melee enemies to reach but may have limited range for certain support buffs that rely on "unit directly in front."
+B. Movement & Swapping
+●	Permanent Deployment: Once a card is played into a slot, it cannot move to another slot or row manually.
+●	Replacement Rule: You may play a card onto an Occupied Slot. The existing unit is Retired (Placed in Discard Pile; "On Death" effects do NOT trigger). The new unit is deployed at full HP.
+●	Retreat: You may voluntarily "Retreat" (discard) a unit to free up a slot without playing a new card.
+●	Feats: Only specific Class Feats (like the Mercenary's "Command"), Passive Relic Effects, or Diamond Abilities can physically move/swap units after deployment.
+C. Combat Phase Resolution (Step-by-Step)
+1.	Start of Turn: Trigger "Start of Turn" effects (e.g., Regeneration, Poison).
+2.	Deployment Phase: Player spends Dice to play cards or Diamonds.
+3.	Player Action Phase:
+○	Rearguard Trigger: Backline units act.
+■	Support Logic: Heals/Shields apply to the unit directly in front.
+■	Ranged Logic: Ranged attacks fire at the enemy with the Lowest HP.
+○	Vanguard Strike: Frontline units attack the enemy directly across from them (Melee).
+■	Cross-Lane Targeting: If the enemy directly in front is dead/empty, the Vanguard unit attacks the nearest enemy (priority: Left, then Right).
+4.	Enemy Response Phase:
+○	Enemy Action: Enemies activate from Left to Right.
+○	Melee Logic: They attack the Player's Vanguard in their lane.
+○	Breach Logic: If a Vanguard slot is empty, the enemy breaks through and attacks the Rearguard slots behind it.
+■	Flank Vulnerability: If the entire Vanguard is wiped, enemies prioritize center Rearguard units first unless an ability targets Flanks.
+○	Leader Strike: If the defensive line is broken (Relevant Vanguard and Rearguard slots empty), the enemy attacks the Leader (HP) directly.
+5.	End of Turn: Cleanup temporary shields, trigger "End of Turn" effects, reduce cooldowns (if any).
+D. Persistence & Death
+●	Survival: Units on the board retain their current HP between turns.
+●	Death: When a unit reaches 0 HP, it is removed and placed in the Discard Pile. It is not Exhausted (permanently lost) unless a specific enemy ability or effect triggers it.
+1.5 Enemy Design
+Enemies are played as "Hands" of cards lying on the table in a line or grid.
+●	The Intent System: Before the player acts, every enemy displays an Intent Icon showing their planned action for the turn.
+○	Sword: Attacking (Damage value shown).
+○	Shield: Buffing Armor/Block.
+○	Sparkles: Casting a Debuff or Special Ability.
+○	Skull: Preparing a heavy/fatal attack.
+●	The Horde: Enemies, consisting of a variety of vanguards, supports, reserves, etc.
+●	The Frontline (Attacker): The card(s) currently engaging the player's Vanguard.
+●	The Backline (Supports): Cards behind the Frontline.
+●	Rotation Mechanic: When the enemy Frontline dies, the Support immediately behind it or to its left steps forward.
+1.6 Class Roster (The Face Cards)
+Face cards are not drawn. They sit on the board as the "Leader" avatar. They determine your starting deck, stats, and unique mechanics.
+Suit: Spades (The Path of Aggression)
+Suit: Spades (The Path of Aggression)
+1. Jack of Spades - "The Adventurer"
+●	Lore: Called to action, the adventurer is thrust from his small corner of the world to save the only home he's ever known from certain doom. Accompanied by a mysterious and brutish swordsman, he must cross the known world to defeat the true evil.
+●	Feat: "My Friends" - Once per turn, pay 1 Dice Point to summon a 1 of Spades (1/1 Militia) to any empty slot.
+●	Passive: "The Drunk Swordsman" - Start the run with a Spades Joker named "The Swordsman" (Cost: 1000 Dice, Unplayable). When the Leader's HP reaches 0, heal to 1 HP, then immediately summon “Cyras, the Gleaming Blade” (50 ATK / Ace of Spades, Taunt) into the Vanguard. This consumes the card.
+2. Queen of Spades - "The Night Sister"
+●	Lore: Inducted into an ancient order of secret assassins, the Night Sister knows but one purpose: to kill. She cared little for the frantic shouting of the ministers and clerics as she took a long look at the depiction of her target. Finally, her family would spill blood worthy of their blades.
+●	Feat: "Flicker Blade" - Once per turn, pay 1/4 the targeted card's Cost (rounded up) to apply a stack of Bleed to it (Deal 2 dmg per turn). Cannot target the same unit twice in a row.
+●	Passive: "In Shadows We Lurk" - All friendly Vanguard units have a 5% Dodge Chance. Vanguard Clubs (Tanks) gain double this chance (10%).
+3. King of Spades - "The War Chief"
+●	Lore: Never has he known a priest whose faith could withstand the edge of his axe, but the loss of his son to the hands of evil itself has set him on a new, treasureless path. Summoning the strongest of the 5 clans to his side, the War Chief sets out to cut down what has robbed him of his only and final joy, come what may.
+●	Feat: "Rip and Tear" - Pay 1 HP + the remaining HP of a friendly unit. Sacrifice that unit to deal damage equal to its full Face Value to an enemy.
+●	Passive: "Run the Sea Red" - When a friendly unit is below 25% HP (rounded down), it becomes Enraged (can attack twice) but is destroyed at the start of your next turn.
+Suit: Clubs (The Path of Protection)
+1. Jack of Clubs - "The Fallen Squire"
+●	Lore: He failed to save his knight from darkness, leaving him with naught but a half-melted shield and vow of silence. Now he wanders the ruins as the sky spoils itself black, placing himself between monsters and the helpless. But does he do so to recover his honor, or to become a martyr himself? His group of peasant followers believe the former, at the very least.
+●	Feat: "Stand Firm" - Pay 2 Dice Points to grant a target unit "Taunt" and +2 HP for one turn.
+●	Passive: "Adamant Will" - The first time a Vanguard unit would take fatal damage in an encounter, it gets back up with 1 HP (once per encounter).
+2. Queen of Clubs - "The Earth Mother"
+●	Lore: She is the lady of the deep woods, where roots strangle stone and bark is harder than steel. The trunks of trees rot from a maligned influence, and she feels each and every ounce of sap dry in their withered branches. She journeys forth not just for the sake of life itself, but silence the endless screams of the forest.
+●	Feat: "Overgrowth" - Pay 3 Dice Points. All empty Vanguard slots fill with "Thorny Vines" (0/3 Walls with Thorns 1).
+●	Passive: "Rooted" - Friendly units cannot be moved or displaced by enemy abilities. Clubs in the Rearguard grant +1 Regen to the unit in front of them.
+3. King of Clubs - "The Iron Emperor"
+●	Lore: A king who replaced his failing flesh with clockwork and steel. He believes that flesh is weak and fleeting, but the machine is eternal. His "subjects" are automatons of his own design, marching in perfect, terrifying unison.
+●	Feat: "Reconstruction" - Pay X Dice Points to heal a target Mechanical unit (Clubs count as mech) for X * 2.
+●	Passive: "Living Metal" - All Club units gain +1 Armor (Reduce all incoming damage by 1, minimum 0).
+Suit: Hearts (The Path of Vitality)
+1. Jack of Hearts - "The Acolyte"
+●	Lore: He found God in the plague-wards, watching the sick die as the medicine men juggled their vials and incense. When the Great Rot began to spread from the north, he saw a vision of its source in the blinding light of the corpse pyres. Realizing that prayer was no longer enough he ventured forth Holy book in one hand, and mace in another, chanting his hymns, as droves of the devoted followed in his path.
+●	Feat: "Martyrdom" - Pay 2 HP (Leader) to heal a target Unit by 4.
+●	Passive: "Shared Suffering" - Whenever the Leader takes damage, all Vanguard units heal for 1 HP.
+2. Queen of Hearts - "The Matriarch"
+●	Lore: An ancient Vampire who has seen empires rise and fall. She does not fear the end of the world for she is its Empress, but she nonetheless resents the encroaching void, seeing it as little more than a pest that threatens to consume her cattle. She seeks to drain the source of this rot to purify her feeding grounds to secure her Coven's immortality, then the world may end.
+●	Feat: "Blood Tithe" - Destroy a friendly unit. Gain HP equal to its remaining HP.
+●	Passive: "Crimson Feast" - All Heart units in the Vanguard gain Hemophilia (Heal self for 50% of damage dealt, rounded down).
+3. King of Hearts - "The Grand Hierophant"
+●	Lore: The head of the Church of Eternal Light, great-great-grandson to the prophet Alvar himself. He views the spreading shadow not just as an enemy, but as a blasphemy against existence. Carrying his Allfather’s sealed sword, he leads a crusade of templars to the depths of the corruption, convinced that only by purging the source of this darkness, for only he can usher in a promised age of light.
+●	Feat: "Divine Intervention" - Pay 4 Dice Points. Revive the last destroyed unit with half HP but 0 Attack into the vanguard slot.
+●	Passive: "Overflowing Grace" - Any healing done to a unit already at Max HP is converted into Shields.
+Suit: Diamonds (The Path of Sorcery)
+1. Jack of Diamonds - "The Alchemist"
+●	Lore: Expelled from the Guild for "unintended bodily inversion" and “heretical use of guild materials," this rogue scholar wanders the wastes. They view the apocalypse not as a tragedy, but as a harvest of rare ingredients. They head towards the source of the corruption not to destroy it, but to distill its essence into the ultimate potion, one that will finally show those old fools he is not to be underestimated.
+●	Feat: "Transmute" - Pay 3 Dice Points. Destroy a card in your hand (remove from encounter) to create a random Diamond card (Rank 2-4) in its place.
+●	Passive: "Philosopher's Touch" - Whenever you play a Diamond card, gain 2 Gold.
+2. Queen of Diamonds - "The Archmage"
+●	Lore: She is the keeper of the Great Library, and she has noticed the pages of future-history are beginning to turn blank. A chaotic anomaly is unravelling the fate of time itself. She marches forth with her fellow mages to rewrite the ending of the world before the ink forever dries.
+●	Feat: "Sight of the Unforeseen" - Pay 2 Dice Points. Look at the top card of your deck, keep it, or send it to the discard pile.
+●	Passive: "Leyline Mastery" - The first Diamond card you play each turn costs 1 less Die (Minimum 1).
+3. King of Diamonds - "The Merchant Prince"
+●	Lore: The apocalypse is bad for business. The rising darkness has disrupted the trade routes and sunk many of his best ships. This isn't a quest for glory, just one of a dozen “hostile takeovers.” He plans to liquidate the source of the chaos and sell the scraps to the highest bidder.
+●	Feat: "Bribe" - Pay 5 Gold (Run Currency). Stun a target enemy unit for 1 turn.
+●	Passive: "Deep Pockets" - You start the run with 50 Gold. Shops always offer 1 extra item slot.
+1.7 Progression & Meta
+A. The Run Structure
+●	7 Levels (The Campaign): A run consists of 7 distinct levels. Each level is a map of nodes leading to a specific Level Boss.
+●	Pathing: After a victory, players choose their next node from three options:
+○	Skirmish: Standard Difficulty. Average rewards.
+○	Elite Battle: High Difficulty. Higher chance of better rewards (Rare cards, more gold, small relic chance).
+○	Event: Non-combat text encounters that utilize your Dice Pool.
+■	Mechanic: The event presents a hurdle (e.g., "A heavy iron gate"). You roll your current Dice Pool and allocate dice to specific solutions based on your Class/Deck.
+■	Example (The Locked Crypt):
+■	Option A (Force): Smash the Lock. Requires 10+ Total Value. (Reward: Loot).
+■	Option B (Finesse): Pick the Lock. Requires a Pair of Dice. (Reward: Loot + Stealth buff).
+■	Option C (Sacrifice): Blood Key. Pay 5 HP. (Reward: Cursed Loot).
+■	Option D (Class - Alchemist): Melt it. Discard 1 Diamond Card. (Reward: Loot + Upgrade).
+●	Rest Sites: Rare nodes where players can Heal the Leader, upgrade a non-diamond cards stats, or exchange a diamond card.
+●	Shops: Nodes where players spend Gold earned from battles.
+○	Economy Standard: Average Fight = 5 Gold. Elite Fight = 10 Gold. Common Card Cost = 15 Gold. Rare Card Cost = 30 Gold. Joker/Relic Cost = 50+ Gold.
+○	Inventory: Buy new Unit cards (Spades/Clubs/Hearts), rare Diamond Spells, or Relics (Passive Buffs).
+○	Services: Pay to "Retrain" (Upgrade) a card or "Dismiss" (Remove) a card from the deck to thin out weak units.
+B. Recruitment (Building the Guild)
+●	Post-Battle Draft: Upon winning a combat node, the player is presented with 5 Cards.
+○	Draft Pick: You may select 1 card to add to your deck.
+○	Skip: You may skip drafting to gain a small amount of Gold (Run Currency).
+●	Rarity Scaling (Value Distribution):
+○	Level 1: Common: 2-4. Rare: 5.
+○	Level 2: Common: 2-5. Rare: 6.
+○	Level 3: Uncommon: 2. Common: 3-6. Rare: 7.
+○	Level 4: Uncommon: 2-3. Common: 4-7. Rare: 8.
+○	Level 5: Uncommon: 2-3 Common: 4-8. Rare: 9.
+○	Level 6: Uncommon: 2-4 Common: 5-9. Rare: 10.
+○	Level 7: Uncommon: 2-5 Common: 6-9. Slightly less rare: 10. High chance for Diamond cards.
+C. Level Bosses (Levels 1-6)
+●	Concept: These are specialized encounters that test specific aspects of your deck. They introduce "Twisted Rules"—global passives that persist for the fight.
+●	Examples:
+○	The Pyromancer: "Scorched Earth" - Any unit remaining in the same slot for more than 1 turn gains a stack of burn each turn after, applying 1 damage per stack at the start of the turn. Promotes movement/swapping/regen.
+○	The Mirror Knight: "Reflection" - All direct damage dealt to the Boss is reflected back to the attacker as half True Damage (pierces shields). Promotes healing/distributed damage dealing/DOT/AOE.
+○	The Plaguebearer: "Rot" - Below half health, healing effects are reversed into damage. Promotes shielding/evasion over restoration/high card cycling/diamond usage.
+D. The Superboss (Level 7)
+●	Concept: The final challenge. These bosses do not just bend rules; they break them. They require a fully optimized Guild/party/band to defeat.
+●	Examples:
+○	The Grandmaster: "Counterspell" - Negates the first diamond played per turn.
+○	The Time-Eater: "Temporal Lock" - Forces the player to end their turn after playing exactly 2 cards, regardless of remaining Dice.
+○	The Dealer: "Repo Man" - Steals a card from your hand every turn and plays it against you (discards diamonds, uses one of his own).
+○	The Swarmhost: “Tide of Flesh” - When a unit dies a unit with half its vale spawns in the position immediately behind it, or becomes a reserve.
+E. The Forge (Meta-Progression)
+●	Currency: Renown (Earned at the end of every run, win or lose, depending on progress, difficulty, etc).
+●	Upgrades: Renown is spent to permanently upgrade specific Face Cards (Classes).
+○	Rank Up (Leader Stats): Increase Starting HP (+2 per rank) or Starting Gold.
+○	Logistics (Dice): Unlock the ability to start with extra dice instead of just 2d6, (2d6+1d4, 3d6, 5d4, etc, with costs scaling with power).
+○	Training (Feats): Reduce the Dice Cost of the Class Feat or increase its potency, add new effects, exchange the feat for another.
+○	Veterancy: Unlock other unique effects that improve your power floor (e.g., Start with a specific Rank 5 Spade instead of a random one, always start with a 7 of diamonds that can be used starting turn 2, round start - fill the middle support slot with a 4 of clubs, etc).
+1.8 Jokers (Wildcards)
+Jokers are rare, powerful "Guest Cards" that do not adhere to standard deck building rules. There are 4 Joker Archetypes, each corresponding to the "Ultimate Form" of a specific Suit's philosophy.
+Universal Rule: Consumable (Guest) All Jokers are Consumable.
+●	Units (Spade/Club/Heart): Stay on the board for the duration of the fight (or until destroyed), but are removed from your deck permanently after the battle ends, having fulfilled their contract.
+●	Artifacts (Diamond): Are Exhausted immediately upon use and removed from the run.
+1. The Slayer (Spade Archetype - Legendary Unit)
+●	Concept: A legendary assassin or beast of war.
+●	Function: A summonable unit (occupies a slot) that deals massive damage.
+●	Example: The Black Knight: Spend any amount of dice points and have that be the attack value (fixed) / 20 HP. Trait: Unrelenting Strikes (Attacks pierce and do true damage [ignore shields]).
+2. The Sentinel (Club Archetype - Legendary Unit)
+●	Concept: An immovable object or magical construct.
+●	Function: A summonable unit (occupies a slot) that fills a non-dps often tank role.
+●	Example: The Iron Colossus: 0 Attack / 50 HP. Trait: "Guardian" - Cannot attack. Takes damage for ALL friendly units (Taunt All Lanes). Immune to Status Effects.
+3. The Saint (Heart Archetype - Legendary Unit)
+●	Concept: Angelic servant or a mythical healer.
+●	Function: A summonable unit (occupies a slot) that grants powerful utilities.
+●	Example: The Phoenix: 5 Attack / 5 HP. Trait: "Miracle" - When played, fully heals the Leader and revives one random destroyed unit. Rebirth: When destroyed, returns to your hand instead of the discard pile (once per encounter).
+4. The Artifact (Diamond Archetype - Legendary Item/Spell)
+●	Concept: Ancient relics, wacky spells, or forbidden scrolls.
+●	Function: Instant Actions (played from hand, do not occupy a slot) that create chaotic, game-warping effects.
+●	Example: "The Golden Gun": Deal 99 Damage to ANY random target.
+●	Example: "The Time Warp": Take an extra turn immediately after this one, lose the turn after that.
+●	Example: "Pandora's Box": Replace every card in your hand with a RANDOM COST Diamond card from any unlocked diamond cards from any class, Exhausts the cards that were replaced.
+●	Example: "Unlimited Power": Your dice total is now 100, you lose the ability to roll dice at the beginning of the turn (other dice effects still apply), when your dice value reaches 0, you deck out.
+1.9 Glossary of Keywords & Mechanics
+To ensure clarity during gameplay, the following keywords define specific mechanics.
+●	Armor (X): Flat damage reduction. All incoming damage is reduced by X (Minimum 0).
+●	Bleed (X): The target takes X damage whenever they attack or activate an ability.
+●	Burn (X): The target takes X damage at the start of their turn. The value of X decreases by 1 each turn.
+●	Exhaust: Removed from the current encounter. Returned to the deck at the end of the battle.
+●	Poison (X): The target takes X damage at the end of their turn. The value does NOT decrease automatically; it must be cleansed.
+●	Stun: The target cannot attack or use abilities for their next turn.
+●	Taunt: Enemies MUST target this unit if able. If multiple units have Taunt, the enemy chooses the closest one.
+●	Stealth: This unit cannot be targeted by single-target attacks. Area of Effect (AOE) damage still hits.
+●	Thorns (X): Any unit that attacks this unit with a melee strike takes X damage.
+●	Shield: Temporary HP that absorbs damage before HP. Shields are removed at the start of the unit's next turn unless specified otherwise (e.g., "Plated").
+●	True Damage: Damage that ignores Shields and Armor, dealing direct HP damage.
+●	Silence: Target unit loses all Passive abilities and cannot be triggered by Support effects for 1 turn.
+1.10 Relics (Passive Artifacts)
+Relics are powerful, passive items found in Shops, Elite Chests, or Events. They provide global buffs to the Leader's party.
+●	Common Relics:
+○	Weighted Dice: Once per encounter, you may reroll any one die.
+○	Officer's Badge: Start every combat with +2 Gold.
+○	Whetstone: All Spade units gain +1 Attack.
+●	Rare Relics:
+○	Vampiric Chalice: Whenever an Elite enemy dies, the Leader heals 2 HP.
+○	Pocket Watch: Draw 1 extra card on Turn 1 of every combat.
+○	Commander's Helm: Increases your maximum hand size by 1.
+●	Boss Relics (Found after beating a Level Boss):
+○	Mana Battery: Start every turn with +1 to your Dice Pool total.
+○	Necronomicon: All "Exhausted" cards have a 50% chance to return to your deck after the battle instead of being lost.
+○	Heavy Crown: Gain +1 Dice every other turn, but enemies start with +1 Strength per turn.
+1.11 Core Gameplay Polish (The Fun Factor)
+To ensure the game feels fluid and strategic rather than frustratingly random, these core mechanics act as "Safety Valves."
+A. Leader Actions (Always Available) Even with a terrible hand or low dice rolls, the Leader can always perform basic actions. These are located on the UI near the Dice Pool.
+●	Punch (1 Die): Deal 1 Damage to the nearest enemy.
+●	Guard (1 Die): Grant 1 Shield to the Leader (Self).
+●	Cycle (2 Dice): Discard 1 card from your hand to Draw 1 card.
+B. Battle Fatigue (Anti-Stall) To prevent infinite healing loops, the environment becomes hostile over time.
+●	Mechanic: Starting on Round 15, "The Darkness Closes In."
+●	Effect: All units (Friendly and Enemy) take 1 True Damage at the end of every turn. This damage increases by +1 every subsequent turn (1, 2, 3, 4...).
+C. The "Mulligan"
+●	Start of Combat: You may shuffle any number of cards from your starting hand back into your deck and redraw that many. You may do this once per combat.
